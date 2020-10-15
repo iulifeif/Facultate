@@ -1,5 +1,6 @@
 import json
 from copy import deepcopy
+from math import sqrt
 
 
 class State:
@@ -51,6 +52,10 @@ class State:
         return [self.UP, self.DOWN, self.RIGHT, self.LEFT]
         # return [move for move in all_moves if self.transition(move)]
 
+    # definesc egalitatea a doua stari
+    def __eq__(self, other):
+        return self.table == other.table and self.pos == other.pos and self.end == other.end
+
 
 # functia BKT pentru laboratorul viitor
 def BKT(state: State):
@@ -66,10 +71,37 @@ def BKT(state: State):
 
 
 def BFS(state: State):
-    if state.is_final():
-        return state
+    visit = []
+    queue = []
+    queue.append(state)
+    while queue:
+        if queue[0].is_final():
+            return queue[0]
+        for move in queue[0].moves:
+            new_state = queue[0].transition(move)
+            if new_state and new_state not in visit:
+                queue.append(new_state)
+        visit.append(queue[0])
+        queue.pop(0)
+    return None
+
+
+# functie pentru calcularea distantei dintre doua puncte, pentru HillClimb
+def calculate_distance(state: State, actual_state: State):
+    return sqrt((state.end[0] - actual_state.pos[0]) * (state.end[0] - actual_state.pos[0]) +
+                (state.end[1] - actual_state.pos[1]) * (state.end[1] - actual_state.pos[1]))
+
 
 def HillClimb(state: State):
+    best_state = state
+    while True:
+        if best_state.is_final():
+            return best_state
+        for move in best_state.moves:
+            new_state = best_state.transition(move)
+            if new_state and calculate_distance(state, new_state) < calculate_distance(state, best_state):
+                best_state = new_state
+    return None
 
 
 if __name__ == '__main__':
@@ -80,6 +112,12 @@ if __name__ == '__main__':
         [0, 1, 0, 1, 0],
         [0, 0, 0, 0, 0]
     ])
-    final_state = BKT(initial_state)
-    print(final_state.table)
-    print(final_state.moves_list)
+    final_state1 = BKT(initial_state)
+    print("Final table for BKT: \n", final_state1.table)
+    print("\nMoves list for BKT: \n", final_state1.moves_list)
+    final_state2 = BFS(initial_state)
+    print("\n Final table for BFS: \n", final_state2.table)
+    print("\nMoves list for BFS: \n", final_state2.moves_list)
+    final_state3 = HillClimb(initial_state)
+    print("\nFinal table for HillClimb: \n", final_state3.table)
+    print("\nMoves list for HillClimb: \n", final_state3.moves_list)
