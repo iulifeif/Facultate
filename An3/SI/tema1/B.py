@@ -1,6 +1,6 @@
-import socket
+import hashlib
 
-from Crypto.Cipher import AES
+from tema1.helper_functions import *
 
 HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
 PORT = 5000       # Port to listen on (non-privileged ports are > 1023)
@@ -13,20 +13,19 @@ if __name__ == '__main__':
         s.listen()
         conn, addr = s.accept()
         with conn:
-            while True:
-                # primeste mesajul de la A
-                received_message = conn.recv(1024).decode()
-                print("[B]Am primit de la nodul A mesajul: " + received_message)
-                # ia legatura cu nodul KM pentru a-i cere cheia speciala
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_KM:
-                    socket_KM.connect(("0.0.0.0", 5005))
-                    # ii trimite lui KM modul de criptare primit de la A
-                    socket_KM.sendall(received_message.encode())
-                    print("[A] Am trimis catre KM " + received_message)
-                    # primeste de la KM cheia
-                    # iv, received_message = socket_KM.recv().decode()
-                    received_message = socket_KM.recv(1024)
-                    iv = received_message[:16]
-                    aes = AES.new(K3, AES.MODE_CBC, iv)
-                    key_decode = aes.decrypt(received_message[16:])
-                    print("[A] Am primit de la KM mesajul: " + key_decode)
+            # primeste modul de criptare de la A
+            type_crypt =conn.recv(1024).decode()
+            print("Mesajul de la B: ", type_crypt)
+            # cere cheia de la KM
+            key_code = get_key_from_KM(K3, type_crypt)
+            conn.sendall("Ready".encode())
+            message_from_A = conn.recv(32)
+            buffer_message = b""
+            block_count = 0
+            while message_from_A:
+                decrypted_message = decrypt_message(key_code, message_from_A, type_crypt)
+                buffer_message += decrypted_message
+                print("Primit {} bytes: {}".format(len(decrypted_message), decrypted_message))
+                block_count += 1
+                message_from_A = conn.recv(32)
+        print("Primit {} blocuri: {}".format(block_count, buffer_message.decode("utf8", errors="ignore")))
