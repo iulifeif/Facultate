@@ -8,21 +8,26 @@ PORT = 5000        # The port used by the server
 
 
 if __name__ == '__main__':
+    # modurile de criptare posibile
     key_dict = ["CBC", "ECB"]
+    # cheia K3 pe care o au KM, A, B
     K3 = b"4h8f.093mJo:*9#$"
-    have_key = 0
     key_code = ""
     type_crypt = 0
+    # cat timp A ul nu primeste un tip de criptare valid
+    # user ul trebuie sa introduca pana cand input ul este valid
     while not type_crypt or type_crypt not in key_dict:
-        # type_crypt = input("Ce fel de criptare vrei sa se execute? (ECB/CBC): ").upper()
-        type_crypt = "CBC"
+        # adaug upper pentru cazul in care input ul este scris in litere mici
+        # iar in lista sunt salvate cu litere mari si nu le vor gasi valide
+        type_crypt = input("Ce fel de criptare vrei sa se execute? (ECB/CBC): ").upper()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_b:
-        # se conecteaza cu portul 5000 adica B-ul
+        # se conecteaza la portul 5000 cu B-ul
         socket_b.connect(("0.0.0.0", 5000))
-        # trimite nodului B ce fel de criptare va folosi
+        # trimite nodului B ce fel de criptare va folosi, ceea ce a introdus user ul
         socket_b.sendall(type_crypt.encode())
-        # trimit mesaj lui KM pentru a primi cheia corespunzatoare
+        # trimit mesaj lui KM pentru a primi cheia corespunzatoare tipului de criptare introdus
         key_code = get_key_from_KM(K3, type_crypt)
+        # creez instanta de encrypt cu cheia corespunzatoare modului de criptare introdus
         encrypt = Encryptor(key_code)
         # primesc mesaj de la B pentru a continua conversatia
         message_from_B = socket_b.recv(1024).decode()
@@ -31,18 +36,11 @@ if __name__ == '__main__':
         if message_from_B != "Ready":
             raise Exception("B is not ready for conversation.")
         with open("tema1/fisier.txt", "rb") as f:
-            # buffer = b""
-            # message_for_B = f.read(16)
-            # block_count = 0
-            # while message_for_B:
-            #     buffer += decrypt_message(K3, encrypt_message(K3, message_for_B, type_crypt), type_crypt)
-            #     print("Trimis {} bytes: {}".format(len(message_for_B), message_for_B))
-            #     # il criptez cu cheia de la KM, trimit lui B iv ul si mesajul criptat cu cheia de la KM
-            #     socket_b.sendall(encrypt_message(key_code, message_for_B, type_crypt))
-            #     block_count += 1
-            #     message_for_B = f.read(16)
+            # citesc din fisier mesajul
             all_message = f.read()
+            # criptez mesajul cu tipul de criptare corespunzator
             message_for_B = encrypt.encrypt_message(all_message, type_crypt)
+            # trimit lui B mesajul criptat
             socket_b.sendall(message_for_B)
-        print(message_for_B)
-        # print("Trimis {} blocuri: {}".format(block_count, buffer.decode("utf8")))
+        # printez mesajul criptat
+        print("Mesajul criptat: ", message_for_B)
