@@ -7,7 +7,7 @@ PORT = 5000       # Port to listen on (non-privileged ports are > 1023)
 
 
 if __name__ == '__main__':
-    K3 = "4h8f.093mJo:*9#$"
+    K3 = b"4h8f.093mJo:*9#$"
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("0.0.0.0", 5000))
         s.listen()
@@ -18,14 +18,14 @@ if __name__ == '__main__':
             print("Mesajul de la B: ", type_crypt)
             # cere cheia de la KM
             key_code = get_key_from_KM(K3, type_crypt)
+            decrypt = Decrytor(key_code)
             conn.sendall("Ready".encode())
             message_from_A = conn.recv(32)
             buffer_message = b""
             block_count = 0
             while message_from_A:
-                decrypted_message = decrypt_message(key_code, message_from_A, type_crypt)
-                buffer_message += decrypted_message
-                print("Primit {} bytes: {}".format(len(decrypted_message), decrypted_message))
-                block_count += 1
+                buffer_message += message_from_A
                 message_from_A = conn.recv(32)
-        print("Primit {} blocuri: {}".format(block_count, buffer_message.decode("utf8", errors="ignore")))
+            message_from_A = decrypt.decrypt_message(buffer_message, type_crypt)
+            print(message_from_A.decode())
+        # print("Primit {} blocuri: {}".format(block_count, buffer_message.decode("utf8", errors="ignore")))

@@ -11,7 +11,7 @@ if __name__ == '__main__':
         "ECB": b"Sixteen byte key",
         "CBC": b"Sixteen byte key"
     }
-    K3 = "4h8f.093mJo:*9#$"
+    K3 = b"4h8f.093mJo:*9#$"
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("0.0.0.0", 5005))
         s.listen()
@@ -22,6 +22,7 @@ if __name__ == '__main__':
                     # primesc mesaj cu ce cheie se doreste criptarea
                     received_message = conn.recv(1024).decode()
                     # se face criptarea pentru cheia ceruta cu K3 si se trimite
-                    conn.sendall(encrypt_message(K3, key_dict[received_message]))
+                    encrypt = Encryptor(K3)
+                    conn.sendall(encrypt.encrypt_message(key_dict[received_message], received_message))
             except Exception:
                 print(traceback.format_exc())

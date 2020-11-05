@@ -1,6 +1,51 @@
 import socket
-from Crypto import Random
-from Crypto.Cipher import AES
+from Cryptodome import Random
+from Cryptodome.Cipher import AES
+
+
+class Crypto:
+    def __init__(self, key_code, iv=0):
+        if not iv:
+            self.iv = Random.new().read(AES.block_size)
+        else:
+            self.iv = iv
+        self.key_code = key_code
+
+
+class Decrytor (Crypto):
+    def decrypt_message(self, message_for_decryption, type_crypt):
+        buffer_text = b""
+        self.iv = message_for_decryption[:16]
+        for index_block in range(16, len(message_for_decryption), 16):
+            block_message = message_for_decryption[index_block:index_block + 16]
+            saved_block_message = block_message
+            aes = AES.new(self.key_code, AES.MODE_ECB)
+            decrypted_block = aes.decrypt(block_message)
+            if type_crypt == "CBC":
+                decrypted_block = byte_xor(decrypted_block, self.iv)
+                self.iv = saved_block_message
+            buffer_text += decrypted_block
+        return buffer_text.strip(chr(0).encode("utf8"))
+
+
+class Encryptor(Crypto):
+    def encrypt_message(self, message_for_encryption, type_crypt):
+        buffer_text = self.iv
+        message_for_encryption = str_to_byt(message_for_encryption)
+        message_for_encryption = pad(message_for_encryption)
+        for index_block in range(0, len(message_for_encryption), 16):
+            block_message = message_for_encryption[index_block:index_block + 16]
+            aes = AES.new(self.key_code, AES.MODE_ECB)
+            if type_crypt == "CBC":
+                block_message = byte_xor(block_message, self.iv)
+            self.iv = aes.encrypt(block_message)
+            buffer_text += self.iv
+        # returnez mesajul proproiu-zis
+        return buffer_text
+
+
+def byte_xor(ba1, ba2):
+    return bytes(a ^ b for a, b in zip(ba1, ba2))
 
 
 def get_key_from_KM(K3, encryption_type):
@@ -12,32 +57,19 @@ def get_key_from_KM(K3, encryption_type):
         # primeste de la KM cheia impreuna cu iv
         message_key = socket_KM.recv(1024)
     # ii face decode pentru a fi de tip string cheia de la KM
-    return decrypt_message(K3, message_key, encryption_type).decode()
+    decrypt = Decrytor(K3)
+    return decrypt.decrypt_message(message_key, encryption_type)
 
 
-def decrypt_message(key_code, message_for_decryption, decryption_type):
-    iv = message_for_decryption[:16]
-    if decryption_type == "CBC":
-        aes = AES.new(key_code, AES.MODE_CBC, iv)
-    else:
-        aes = AES.new(key_code, AES.MODE_ECB, iv)
-    # decripteaza mesajul, il decodeaza pentru a fi string, scoate spatiile de la final in caz ca sunt
-    # si il encodeaza din nou pentru a fi iar binar
-    return aes.decrypt(message_for_decryption[16:]).strip(chr(0).encode("utf8"))
-
-
-def encrypt_message(key_code, message_for_encryption, encryption_type):
+def pad(text_to_pad):
     # daca blocul pentru encriptie nu este multiplu de 16 bytes, adaug spatii goale pana la dimensiunea potrivita
-    if type(message_for_encryption) is str:
-        message_for_encryption = message_for_encryption.encode("utf8")
-    block_to_pad = (16 - len(message_for_encryption) % 16) % 16
-    message_for_encryption += chr(0).encode("utf8") * block_to_pad
-    # apoi codez blocul cu dimensiunea corecta
-    iv = Random.new().read(AES.block_size)
-    if encryption_type == "CBC":
-        aes = AES.new(key_code, AES.MODE_CBC, iv)
-    else:
-        aes = AES.new(key_code, AES.MODE_ECB, iv)
-    send_message = aes.encrypt(message_for_encryption)
-    # returnez mesajul format din iv si mesajul proproiu-zis
-    return iv + send_message
+    blocks = (16 - len(text_to_pad) % 16) % 16
+    text_to_pad += chr(0).encode("utf8") * blocks
+    return text_to_pad
+
+
+def str_to_byt(input):
+    if type(input) is str:
+        return input.encode("utf8")
+    return input
+
