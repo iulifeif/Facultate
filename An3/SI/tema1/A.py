@@ -1,7 +1,7 @@
 import hashlib
 import os
 
-from tema1.helper_functions import *
+from helper_functions import *
 
 HOST = "0.0.0.0"  # The server's hostname or IP address
 PORT = 5000        # The port used by the server
@@ -35,12 +35,13 @@ if __name__ == '__main__':
         # in cazul in care nu primeste mesaj de start de la B, nu mai trimite nimic
         if message_from_B != "Ready":
             raise Exception("B is not ready for conversation.")
-        with open("tema1/fisier.txt", "rb") as f:
+        with open("fisier.txt", "rb") as f:
             # citesc din fisier mesajul
             all_message = f.read()
             # criptez mesajul cu tipul de criptare corespunzator
             message_for_B = encrypt.encrypt_message(all_message, type_crypt)
-            # trimit lui B mesajul criptat
-            socket_b.sendall(message_for_B)
+            # trimit lui B mesajul criptat in block uri de 16 bytes
+            for index in range(0, len(message_for_B), 16):
+                socket_b.sendall(message_for_B[index:index + 16])
         # printez mesajul criptat
         print("Mesajul criptat: ", message_for_B)

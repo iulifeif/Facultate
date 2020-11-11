@@ -1,6 +1,6 @@
 import hashlib
 
-from tema1.helper_functions import *
+from helper_functions import *
 
 HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
 PORT = 5000
@@ -26,12 +26,12 @@ if __name__ == '__main__':
             # creez buffer ul pentru a salva tot mesajul intr un loc
             buffer_message = b""
             # primeste un block criptat de la A
-            message_from_A = conn.recv(1024)
+            message_from_A = conn.recv(32)
             while message_from_A:
                 # salvez in buffer block ul
                 buffer_message += message_from_A
                 # citeste urmatorul block de mesaj
-                message_from_A = conn.recv(1024)
+                message_from_A = conn.recv(32)
             # decriptez tot mesajul salvat de la A impreuna cu tipul de criptare
             message_from_A = decrypt.decrypt_message(buffer_message, type_crypt)
             # decodez mesajul si il printez

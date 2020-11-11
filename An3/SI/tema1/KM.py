@@ -1,6 +1,6 @@
 import traceback
 
-from tema1.helper_functions import *
+from helper_functions import *
 
 HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
 PORT = 5005       # Port to listen on (non-privileged ports are > 1023)

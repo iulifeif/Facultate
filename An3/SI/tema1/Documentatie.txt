@@ -1,0 +1,32 @@
+                                    
+                                    Documentatie Tema1 SI:
+                
+                
+    Toate cerintele temei au fost rezolvate, criptarea si decriptarea merge pe orice tip de input.
+    Tot proiectul este facut in limbajul python cu ajutorul librariei Cryptodome.
+    Proiectul este format din 5 fisiere:
+        1. helper_functions.py contine: 
+            a. O clasa de baza Crypto pentru a salva cheia de criptare/decriptare si iv ul. Din aceasta clasa am creat alte doua mostenite, una pentru criptare si alta pentru decriptare. 
+            b. Functia de criptare, primeste tot mesajul, il face in bytes din string, il padeaza daca este nevoie, il separa in block uri de 16 bytes, dupa care il cripteaza cu modul ECB, daca asa este nevoie, altfel cu modul CBC folosind si xor-uri cu iv-ul, dupa care salveaza tot intr un buffer si il returneaza. c. Decriptarea primeste de asemenea un text pe care il separa in block uri de 16 bytes, il decripteaza, ii face xor (daca modul este CBC), salveaza iv-ul pentru urmatorul block, pune tot in bufferul de text si il returneaza mai departe.
+            d. Functia bytex_xor face xor la doua multimi de bytes, byte cu byte
+            e. Functia get_key_from_KM se conecteaza cu KM ul la portul 5005, ii transmite tipul de criptare dorit, primeste cheia criptata de la el, o decripteaza si o retuneaza.
+            f. Functia pad padeaza un text la final cu spatii goale pana cand lungimea textului este multiplu de 16
+            g. Functia str_to_bytes schimba tipul inputului din string in bytes.
+            Aceste functii au fost facute separat pentru eficientizare, deoarece sunt apelate de catre toate cele 3 clase A, B, KM. 
+        2. A.py executa ceea ce se cere de la A in cerinta:
+            Primeste ca si input de la tastatura tipul de criptare dorit, se conecteaza cu B pentru a-i transmite modul de criptare, cere cheia de la KM, primeste mesajul de la B care il anunta ca e gata de conversatie, dupa care citeste din fisierul "fisier.txt" textul, il cripteaza si il trimite lui B in block uri de 16 bytes.
+        3. B.py executa ceea ce se cere de la B in cerinta:
+            Primeste modul de criptare de la A, ii cere cheia specifica lui KM, ii trimite mesaj de ready lui A pentru a incepe comunicarea, primeste block uri de 16 bytes de informatie de la A, salveaza toate block urile intr un buffer, le decripteaza si afiseaza la ecran mesajul.
+        4. KM.py executa ceea ce se cere de la KM in cerinta:
+            Este cel care are cele doua chei K1 si K2, asuteapta conexiune la portul 5005, primeste modul de criptare dorit si trimite cheia specifica modului de criptare dorit, criptata cu K3.
+        5. fisier.txt este fisierul unde se afla textul ce urmeaza sa fie criptat.
+    
+    Pentru a verifica functionalitatea proiectului, introduceti textul in fisier.txt, ce doriti sa fie criptat, rulati KM, B si apoi A. In consola de la A veti vedea mesajul cripotat, iar in consola de la B veti vedea mesajul decriptat.
+    
+    Setup:
+        python3 -m pip install -r requirements.txt
+        
+    Run:(din terminal, in paralel, pornite in aceasta ordine) 
+        python3 KM.py 
+        python3 B.py
+        python3 A.py

@@ -19,7 +19,7 @@ class Encryptor(Crypto):
         # prima oara pun in buffer iv-ul pentru ca ne va trebui la decriptare
         buffer_text = self.iv
         # in cazul in care primesc un mesaj str, il convertesc in bytes
-        message_for_encryption = str_to_byt(message_for_encryption)
+        message_for_encryption = str_to_bytes(message_for_encryption)
         # padez textul pentru a avea o lungime multiplu de 16
         message_for_encryption = pad(message_for_encryption)
         # iau block uri de cate 16 bytes din text
@@ -103,7 +103,7 @@ def pad(text_to_pad):
 
 # functia ce converteste textul primit ca si input din string in bytes
 # daca este deja bytes nu il modifica cu nimic
-def str_to_byt(input):
+def str_to_bytes(input):
     if type(input) is str:
         return input.encode("utf8")
     return input
