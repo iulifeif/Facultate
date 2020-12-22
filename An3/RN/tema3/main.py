@@ -16,12 +16,12 @@ def sigmoid_function_d(x):
     return np.array([elem * (1 - elem) for elem in x])
 
 
-def relu_function(x):
-    return np.array([max(0, elem) for elem in x])
-
-
-def relu_function_d(x):
-    return np.array([1 if elem >= 0 else 0 for elem in x])
+# def relu_function(x):
+#     return np.array([max(0, elem) for elem in x])
+#
+#
+# def relu_function_d(x):
+#     return np.array([1 if elem >= 0 else 0 for elem in x])
 
 
 def dataset_random_slices(dataset_list, slice_size):
@@ -49,7 +49,8 @@ class NeuralNetwork:
     # functia de feed forward care inmulteste inputul cu weighturile si le aduna
     def feed_forward(self, inputs):
         hidden_layer = self.activation_function(np.dot(inputs, self.weights))
-        return hidden_layer, self.activation_function(np.dot(hidden_layer, self.weights2))
+        output_layer = self.activation_function(np.dot(hidden_layer, self.weights2))
+        return hidden_layer, output_layer
 
     # functia de train pe minibatch uri (calculeaza eroarea pentru toate si apoi o aduna la delta si bias)
     def train_minibatch(self, data_set):
@@ -81,7 +82,12 @@ class NeuralNetwork:
         hidden_err = np.dot(self.weights2, label - output) * self.activation_function_d(hidden) * self.lr
         return output_err, hidden_err
 
-    # functia de test per perceptron
+    def cross_entropy(self, label, output):
+        # ln(procentajul pe care l-a prezis) inmultit cu procetajul care era de fapt, toate adunate si inmultite cu -1
+        return -1.0 * sum([np.log(output[index]) * label[index] for index in range(len(label))])
+
+
+    # functia de test
     def test(self, inputs, labels):
         counter = 0
         for position in range(len(inputs)):
@@ -100,7 +106,7 @@ if __name__ == '__main__':
     f = gzip.open("mnist.pkl.gz", "rb")
     train_set, valid_set, test_set = pickle.load(f, encoding="latin1")
     f.close()
-    inputs, labels = train_set
+        inputs, labels = train_set
     new_labels = []
     for elem in labels:
         new_label = [0] * 10
@@ -115,16 +121,16 @@ if __name__ == '__main__':
         new_labels.append(new_label)
     test_labels = np.array(new_labels)
     input_size = len(inputs[0])
-    nn = NeuralNetwork(input_size, 100, 10, relu_function, relu_function_d, learning_rate=0.0001)
-    if False:
-        with open("network.bin", "rb") as fd:
-            nn = pickle.load(fd)
+    nn = NeuralNetwork(input_size, 100, 10, sigmoid_function, sigmoid_function_d, learning_rate=0.0001)
+    # if False:
+    #     with open("network.bin", "rb") as fd:
+    #         nn = pickle.load(fd)
     for _ in range(5):
         start_time = time.time()
         nn.train(inputs, labels)
         print(time.time()-start_time, "seconds per epoch")
-    with open("network.bin", "wb") as fd:
-        pickle.dump(nn, fd)
+    # with open("network.bin", "wb") as fd:
+    #     pickle.dump(nn, fd)
     print("Train set accuracy:", nn.test(inputs, labels))
     print("Test set accuracy:", nn.test(test_inputs, test_labels))
 
