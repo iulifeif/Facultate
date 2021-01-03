@@ -80,11 +80,12 @@ if __name__ == '__main__':
         choose_move = dqln.move(obs_preprocessed)
         observation, reward, done, info = env.step(dqln.possible_actions[choose_move])
         dqln.remember(obs_preprocessed, choose_move, reward, prepro(observation), done)
-        if not iterations % 100:
-            env.render()
+        # if not iterations % 100:
+            # env.render()
         if done == True:
             env.reset()
             dqln.train()
             EXPLORATION_RATE *= DECAY
             iterations += 1
+            dqln.model.save("nn-model")
     env.close()
