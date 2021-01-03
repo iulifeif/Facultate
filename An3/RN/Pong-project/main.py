@@ -14,10 +14,10 @@ from tensorflow.python.keras.optimizer_v2.adam import Adam
 MOVE_DOWN = 2
 MOVE_UP = 3
 STAY = 0
-LR = 0.01
+LR = 0.1
 BUFFER_SIZE = 50000
-EXPLORATION_RATE = 0.4
-DEKAY = 0.88
+EXPLORATION_RATE = 0.99
+DECAY = 0.88
 BATCH_SIZE = 100
 MAX_TRAINING_ITERATIONS = 90000
 
@@ -28,21 +28,15 @@ class DQLN:
         self.memory = deque(maxlen=BUFFER_SIZE)
         self.model = Sequential()
         self.model.add(Dense(units=200, input_dim=80*80, activation="relu"))
-        self.model.add(Dense(100, activation="relu"))
         self.model.add(Dense(3, activation="softmax"))
         self.model.compile(loss="mse", optimizer=Adam(lr=LR))
         self.possible_actions = [MOVE_UP, MOVE_DOWN, STAY]
 
     def move(self, img_input):
         if np.random.rand() < EXPLORATION_RATE:
-            x = random.choice([0, 1, 2])
-            if not 0 <= x <= 2:
-                print("ceva1")
-            return x
+            return random.choice([0, 1, 2])
         else:
             q = self.model.predict(img_input)[0]
-            if not 0 <= np.argmax(q) <= 2:
-                print("ceva2")
             return np.argmax(q)
 
     def remember(self, state, action, reward, next_state, done):
@@ -80,13 +74,17 @@ if __name__ == '__main__':
     env.reset()
     dqln = DQLN(LR)
     observation, reward, done, info = env.step(0)
-    while True:
-        dqln.train()
+    iterations = 0
+    while iterations < MAX_TRAINING_ITERATIONS:
         obs_preprocessed = prepro(observation)
-        choose_move = dqln.possible_actions[dqln.move(obs_preprocessed)]
-        observation, reward, done, info = env.step(choose_move)
+        choose_move = dqln.move(obs_preprocessed)
+        observation, reward, done, info = env.step(dqln.possible_actions[choose_move])
         dqln.remember(obs_preprocessed, choose_move, reward, prepro(observation), done)
-        env.render()
+        if not iterations % 100:
+            env.render()
         if done == True:
-            print("ceva")
+            env.reset()
+            dqln.train()
+            EXPLORATION_RATE *= DECAY
+            iterations += 1
     env.close()
