@@ -8,8 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
+from tensorflow.python.feature_column.feature_column import InputLayer
 from tensorflow.python.keras import Sequential
-from tensorflow.python.keras.layers import Dense, Flatten
+from tensorflow.python.keras.layers import Dense, Flatten, Conv2D
 from tensorflow.python.keras.models import model_from_json
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 
@@ -34,10 +35,15 @@ class DQLN:
             self.model.load_weights("model.h5")
         else:
             self.model = Sequential()
-            self.model.add(Dense(units=200, input_dim=80*80, activation="relu"))
+            self.model.add(InputLayer(input_shape=(80, 80, 1)))
+            self.model.add(Conv2D(16, 8, 4, activation="relu"))
+            self.model.add(Conv2D(32, 4, 2, activation="relu"))
+            self.model.add(Flatten())
+            self.model.add(Dense(units=200, activation="relu"))
             self.model.add(Dense(units=50, activation="relu"))
             self.model.add(Dense(3, activation="softmax"))
         self.model.compile(loss="mse", optimizer=Adam(lr=LR))
+        self.model.summary()
         self.possible_actions = [MOVE_UP, MOVE_DOWN, STAY]
 
     def move(self, img_input):
@@ -78,6 +84,7 @@ class DQLN:
             labels.append(q_values)
         self.model.fit(np.array(inputs), np.array(labels), verbose=1)
 
+
 def prepro(I):
     # “”” prepro 210 x160x3 frame into 6400(80 x80) 1 D float vector “””
     I = I[35:195]  # crop
@@ -86,7 +93,7 @@ def prepro(I):
     I[I == 109] = 0  # erase background (background type 2)
     I[I != 0] = 1  # everything else (paddles, ball) just set to 1
     x = I.astype(np.float).ravel()
-    return np.expand_dims(x, axis=1).T
+    return np.array(np.split(x, 80)).reshape(1, 80, 80, 1)
 
 
 if __name__ == '__main__':
@@ -102,13 +109,13 @@ if __name__ == '__main__':
         obs_preprocessed = prepro(observation)
         choose_move = dqln.move(obs_preprocessed)
         observation, reward, done, info = env.step(dqln.possible_actions[choose_move])
-        if dry_run:
+        if not dry_run:
             dqln.remember(obs_preprocessed, choose_move, reward, prepro(observation), done)
         if dry_run or not iterations % 5:
             env.render()
         if done == True:
             env.reset()
-            if dry_run:
+            if not dry_run:
                 dqln.train()
             EXPLORATION_RATE *= DECAY
             iterations += 1
