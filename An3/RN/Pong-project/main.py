@@ -1,3 +1,4 @@
+import os
 from collections import deque
 
 import gym
@@ -9,6 +10,7 @@ import random
 
 from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import Dense, Flatten
+from tensorflow.python.keras.models import model_from_json
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 
 MOVE_DOWN = 2
@@ -17,8 +19,8 @@ STAY = 0
 LR = 0.1
 BUFFER_SIZE = 50000
 EXPLORATION_RATE = 0.99
-DECAY = 0.88
-BATCH_SIZE = 100
+DECAY = 0.8
+BATCH_SIZE = 400
 MAX_TRAINING_ITERATIONS = 90000
 
 
@@ -26,9 +28,15 @@ class DQLN:
     def __init__(self, lr):
         self.lr = lr
         self.memory = deque(maxlen=BUFFER_SIZE)
-        self.model = Sequential()
-        self.model.add(Dense(units=200, input_dim=80*80, activation="relu"))
-        self.model.add(Dense(3, activation="softmax"))
+        if os.path.exists("model.json"):
+            with open("model.json", "r") as json_file:
+                self.model = model_from_json(json_file.read())
+            self.model.load_weights("model.h5")
+        else:
+            self.model = Sequential()
+            self.model.add(Dense(units=200, input_dim=80*80, activation="relu"))
+            self.model.add(Dense(units=50, activation="relu"))
+            self.model.add(Dense(3, activation="softmax"))
         self.model.compile(loss="mse", optimizer=Adam(lr=LR))
         self.possible_actions = [MOVE_UP, MOVE_DOWN, STAY]
 
@@ -49,14 +57,26 @@ class DQLN:
         batch[-1] = self.memory[-1]
         if BATCH_SIZE > 1:
             batch[-2] = self.memory[-1]
-        for state, action, reward, state_next, terminal in batch:
+        inputs = []
+        labels = []
+        next_states = []
+        states = []
+        for state, _, _, state_next, _ in batch:
+            next_states.append(state_next[0])
+            states.append(state[0])
+        q_predictions = self.model.predict(np.array(next_states))
+        q_values_predictions = self.model.predict(np.array(states))
+        for index in range(len(batch)):
+            state, action, reward, _, terminal = batch[index]
+            state_next = q_predictions[index]
             q_update = reward
             if not terminal:
-                # q_update = (reward + LR * np.amax(self.model.predict(state_next)[0]))
-                q_update = (reward + LR)
-            q_values = self.model.predict(state)
-            q_values[0][action] = q_update
-            self.model.fit(state, q_values, verbose=0)
+                q_update = (reward + 0.9 * np.amax(state_next))
+            q_values = q_values_predictions[index]
+            q_values[action] = q_update
+            inputs.append(state)
+            labels.append(q_values)
+        self.model.fit(np.array(inputs), np.array(labels), verbose=1)
 
 def prepro(I):
     # “”” prepro 210 x160x3 frame into 6400(80 x80) 1 D float vector “””
@@ -75,17 +95,25 @@ if __name__ == '__main__':
     dqln = DQLN(LR)
     observation, reward, done, info = env.step(0)
     iterations = 0
+    dry_run = False
+    if dry_run:
+        EXPLORATION_RATE = 0
     while iterations < MAX_TRAINING_ITERATIONS:
         obs_preprocessed = prepro(observation)
         choose_move = dqln.move(obs_preprocessed)
         observation, reward, done, info = env.step(dqln.possible_actions[choose_move])
-        dqln.remember(obs_preprocessed, choose_move, reward, prepro(observation), done)
-        # if not iterations % 100:
-            # env.render()
+        if dry_run:
+            dqln.remember(obs_preprocessed, choose_move, reward, prepro(observation), done)
+        if dry_run or not iterations % 5:
+            env.render()
         if done == True:
             env.reset()
-            dqln.train()
+            if dry_run:
+                dqln.train()
             EXPLORATION_RATE *= DECAY
             iterations += 1
-            dqln.model.save("nn-model")
+            dqln.model.save_weights("model.h5")
+            with open("model.json", "w") as json_file:
+                json_file.write(dqln.model.to_json())
+            print("eps:", EXPLORATION_RATE, "epoch:", iterations, "memory:", len(dqln.memory))
     env.close()
